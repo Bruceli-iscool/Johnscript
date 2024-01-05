@@ -1,2 +1,2 @@
 # Johnscript
- A coding language thats based pf javascript.
+ A coding language thats based of javascript.
