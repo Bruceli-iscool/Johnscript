@@ -195,3 +195,9 @@ if (args.length === 0) {
     const filePath = path.resolve(args[0]);
     interpretFile(filePath);
 }
+
+module.exports = {
+    tokenize,
+    Interpreter,
+    interpretFile,
+  };

@@ -1,23 +1,25 @@
-#!/usr/bin/env node
-// offline
-
 const fs = require('fs');
-const prompt = require('prompt-sync')();
-const { interpret } = require('./johnscript');
+const johnscript = require('./johnscript');
 
-function runScript(filePath) {
-    const sourceCode = fs.readFileSync(filePath, 'utf-8');
-    interpret(sourceCode);
+function evaluateJohnscriptFile(filePath) {
+  const code = fs.readFileSync(filePath, 'utf-8');
+  const variables = {};
+  try {
+    const result = johnscript.evaluateJohnscript(code, variables);
+    console.log('Result:', result);
+  } catch (error) {
+    console.error('Error:', error.message);
+  }
 }
 
-runREPL();
+if (require.main === module) {
+  const args = process.argv.slice(2);
 
-const args = process.argv.slice(2);
+  if (args.length !== 2 || args[0] !== 'run') {
+    console.error('Usage: node johnscript_interpreter.js run <file.john>');
+    process.exit(1);
+  }
 
-if (args.length === 0) {
-    console.log('Usage: node johnIDE.js <filename.john>');
-    runREPL();
-} else {
-    const filePath = args[0];
-    runScript(filePath);
+  const filePath = args[1];
+  evaluateJohnscriptFile(filePath);
 }
