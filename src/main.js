@@ -169,3 +169,29 @@ class Parser {
         }
     }
 }
+
+const fs = require('fs');
+const path = require('path');
+
+function interpretFile(filePath) {
+    const sourceCode = fs.readFileSync(filePath, 'utf-8');
+    interpret(sourceCode);
+}
+
+function interpret(sourceCode) {
+    const tokens = tokenize(sourceCode);
+    const parser = new Parser(tokens);
+    const ast = parser.parseProgram();
+
+    const interpreter = new Interpreter();
+    interpreter.interpret(ast);
+}
+
+
+const args = process.argv.slice(2);
+if (args.length === 0) {
+    console.log('Usage: node johnscript.js <filename.john>');
+} else {
+    const filePath = path.resolve(args[0]);
+    interpretFile(filePath);
+}
