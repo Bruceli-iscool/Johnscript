@@ -16,7 +16,7 @@ if (require.main === module) {
   const args = process.argv.slice(2);
 
   if (args.length !== 2 || args[0] !== 'run') {
-    console.error('Usage: node johnscript_interpreter.js run <file.john>');
+    console.error('Usage: node johnscriptcompiler.js run <file.john>');
     process.exit(1);
   }
 
