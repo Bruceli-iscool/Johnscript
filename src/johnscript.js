@@ -96,8 +96,12 @@ class Interpreter {
         }
     }
 
-    interpret(ast) {
-        return this.visit(ast);
+    visitProgram(node) {
+        let result = null;
+        for (const statement of node.body) {
+            result = this.visit(statement);
+        }
+        return result;
     }
 
     visit(node) {
@@ -106,9 +110,15 @@ class Interpreter {
                 return this.visitLit(node);
             case 'BinaryExpression':
                 return this.visitBinaryExpression(node);
+            case 'Program':
+                return this.visitProgram(node);
             default:
                 throw new Error(`Unsupported node type: ${node.type}`);
         }
+    }
+
+    interpret(ast) {
+        return this.visit(ast);
     }
 }
 
@@ -179,9 +189,9 @@ class Parser {
             return { type: 'Literal', value: parseInt(token.value) };
         } else if (token.type === 'IDENTIFIER' && this.tokens[this.currentTokenIndex + 1]?.type === 'OPERATOR') {
             const leftOperand = { type: 'Identifier', name: token.value };
-            this.consumeToken(); 
+            this.consumeToken(); // Consume the identifier
             const operator = this.tokens[this.currentTokenIndex].value;
-            this.consumeToken(); 
+            this.consumeToken(); // Consume the operator
             const rightOperand = this.parseExpression();
             return { type: 'BinaryExpression', leftOperand, operator, rightOperand };
         } else {
@@ -251,4 +261,3 @@ rl.question('Enter the filename to run: ', (filename) => {
         console.error('Error:', error.message);
     }
 });
-
