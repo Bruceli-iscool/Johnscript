@@ -2,7 +2,7 @@
 
 
 const fs = require('fs');
-const readline = require('readline');
+const prompt = require('prompt-sync')();
 const { interpret } = require('./johnscript');
 
 function runScript(filePath) {
@@ -10,23 +10,7 @@ function runScript(filePath) {
     interpret(sourceCode);
 }
 
-function runREPL() {
-    const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout,
-        prompt: 'JohnIDE> '
-    });
-
-    rl.prompt();
-
-    rl.on('line', (line) => {
-        interpret(line.trim());
-        rl.prompt();
-    }).on('close', () => {
-        console.log('Exiting JohnIDE.');
-        process.exit(0);
-    });
-}
+runREPL();
 
 const args = process.argv.slice(2);
 
