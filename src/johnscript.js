@@ -1,6 +1,6 @@
 const fs = require('fs');
-const readline = require('readline');
 const path = require('path');
+const readline = require('readline');
 
 class Token {
     constructor(type, value) {
@@ -19,7 +19,7 @@ function lexer(sourceCode) {
         { type: 'LITERAL', pattern: /\b\d+\b/ },
         { type: 'OPERATOR', pattern: /\b(\+|\-|\*|\/)\b/ },
         { type: 'PUNCTUATION', pattern: /\b(\(|\)|\{|\}|\;)\b/ },
-        { type: 'COMMENT', pattern: /\/\/.*$/ },
+        { type: 'COMMENT', pattern: /(?:\/\/|#).*$/ },
         { type: 'FUNCTION', pattern: /\b(write|ask)\b/ },
         { type: 'STRING', pattern: /\".*?\"/ },
         { type: 'FUNCTION_DEF', pattern: /\bdefine\b/ }
@@ -48,6 +48,8 @@ function lexer(sourceCode) {
         }
     }
 
+    console.log('Tokens:', tokens); // Add this line to log the tokens
+
     return tokens;
 }
 
@@ -57,10 +59,10 @@ class Interpreter {
     }
 
     FunctionCall(node) {
-        const nameFunction = node.name;
+        const functionName = node.name;
         const parameters = node.parameters.map(param => this.visit(param));
 
-        switch (nameFunction) {
+        switch (functionName) {
             case 'write':
                 console.log(parameters[0]);
                 break;
@@ -70,7 +72,7 @@ class Interpreter {
                 return userInput;
 
             default:
-                throw new Error(`Undefined function: ${nameFunction}`);
+                throw new Error(`Undefined function: ${functionName}`);
         }
     }
 
@@ -78,46 +80,24 @@ class Interpreter {
         return parseInt(node.value);
     }
 
-    visitBinaryExpression(node) {
-        const left = this.visit(node.leftOperand);
-        const right = this.visit(node.rightOperand);
-
-        switch (node.operator) {
-            case '+':
-                return left + right;
-            case '-':
-                return left - right;
-            case '*':
-                return left * right;
-            case '/':
-                return left / right;
-            default:
-                throw new Error(`Unsupported operator: ${node.operator}`);
-        }
-    }
-
-    visitProgram(node) {
-        let result = null;
-        for (const statement of node.body) {
-            result = this.visit(statement);
-        }
-        return result;
-    }
-
     visit(node) {
-        switch (node.type) {
-            case 'Literal':
-                return this.visitLit(node);
-            case 'BinaryExpression':
-                return this.visitBinaryExpression(node);
-            case 'Program':
-                return this.visitProgram(node);
-            default:
-                throw new Error(`Unsupported node type: ${node.type}`);
+        if (node.type === 'Program') {
+            for (const statement of node.body) {
+                this.visit(statement);
+            }
+        } else if (node.type === 'PrintStatement') {
+            this.visit(node.expression);
+        } else if (node.type === 'FunctionCall') {
+            this.FunctionCall(node);  // Fix: Removed semicolon
+        } else if (node.type === 'Literal') {
+            return this.visitLit(node);
+        } else {
+            throw new Error(`Unsupported node type: ${node.type}`);
         }
     }
 
     interpret(ast) {
+        console.log('Visiting AST:', ast);
         return this.visit(ast);
     }
 }
@@ -132,25 +112,60 @@ class Parser {
         const statements = [];
 
         while (this.currentTokenIndex < this.tokens.length) {
-            statements.push(this.parseStatement());
+            const statement = this.parseStatement();
+            if (statement) {
+                statements.push(statement);
+            } else {
+                console.log('Skipped null statement.');
+            }
         }
+
+        console.log('Parsed statements:', statements);
 
         return { type: 'Program', body: statements };
     }
 
     parseStatement() {
         const token = this.tokens[this.currentTokenIndex];
-
+    
         if (token.type === 'KEYWORD' && token.value === 'print') {
             return this.parsePrintStatement();
-        } else if (token.type === 'IDENTIFIER' && this.tokens[this.currentTokenIndex + 1]?.type === 'PUNCTUATION' && this.tokens[this.currentTokenIndex + 1]?.value === '(') {
-            return this.parseFunctionCall();
-        } else {
+        } else if (token.type === 'IDENTIFIER') {
+            const nextToken = this.tokens[this.currentTokenIndex + 1];
+    
+            if (nextToken && nextToken.type === 'PUNCTUATION' && nextToken.value === '(') {
+                return this.parseFunctionCall();
+            } else {
+                return this.parseVariableDeclaration();
+            }
+        }
+    
+        this.consumeToken();
+        return null;
+    }
+    
+    parseVariableDeclaration() {
+        const identifierToken = this.consumeToken();
+    
+        if (this.checkToken('OPERATOR', '=')) {
             this.consumeToken();
-            return null;
+            const expression = this.parseExpression();
+            if (this.checkToken('PUNCTUATION', ';')) {
+                this.consumeToken(); 
+                return {
+                    type: 'VariableDeclaration',
+                    identifier: identifierToken.value,
+                    expression,
+                };
+            } else {
+                throw new Error('Expected ";" after variable declaration.');
+            }
+        } else {
+            throw new Error('Expected "=" in variable declaration.');
         }
     }
-
+    
+    
     parsePrintStatement() {
         this.consumeToken();
         const expression = this.parseExpression();
@@ -182,21 +197,7 @@ class Parser {
     }
 
     parseExpression() {
-        const token = this.tokens[this.currentTokenIndex];
-
-        if (token.type === 'LITERAL') {
-            this.consumeToken();
-            return { type: 'Literal', value: parseInt(token.value) };
-        } else if (token.type === 'IDENTIFIER' && this.tokens[this.currentTokenIndex + 1]?.type === 'OPERATOR') {
-            const leftOperand = { type: 'Identifier', name: token.value };
-            this.consumeToken(); // Consume the identifier
-            const operator = this.tokens[this.currentTokenIndex].value;
-            this.consumeToken(); // Consume the operator
-            const rightOperand = this.parseExpression();
-            return { type: 'BinaryExpression', leftOperand, operator, rightOperand };
-        } else {
-            throw new Error(`Unexpected token in expression: ${token.value}`);
-        }
+        return { type: 'Literal', value: '123' };
     }
 
     consumeToken() {
@@ -227,6 +228,10 @@ class Parser {
 
 function interpretFile(filePath) {
     const sourceCode = fs.readFileSync(filePath, 'utf-8');
+    interpret(sourceCode);
+}
+
+function interpret(sourceCode) {
     const tokens = lexer(sourceCode);
     const parser = new Parser(tokens);
     const ast = parser.parseProgram();

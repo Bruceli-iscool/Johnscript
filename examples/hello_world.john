@@ -1,11 +1,7 @@
-// Example: Greet the user
+
 
 define greet(name) {
     write("Hello, " + name + "!");
 }
-
-// Get user input
 const user = ask("What is your name?");
-
-// Call the greet function
 greet(user);
